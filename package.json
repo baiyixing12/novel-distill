@@ -1,0 +1,46 @@
+{
+  "name": "novel-distill",
+  "version": "0.1.0",
+  "description": "小说文本蒸馏器：文风指纹 + 设定档案 + 去 AI 味检测。纯 JS 零依赖，适用于任何 agent。",
+  "type": "module",
+  "bin": {
+    "novel-distill": "cli.js"
+  },
+  "main": "cli.js",
+  "files": [
+    "cli.js",
+    "core/",
+    "mcp-server.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node cli.js",
+    "mcp": "node mcp-server.js",
+    "test": "node cli.js examples/sample.txt"
+  },
+  "keywords": [
+    "novel",
+    "text-analysis",
+    "style-fingerprint",
+    "ai-detection",
+    "worldbuilding",
+    "agent",
+    "mcp",
+    "cli",
+    "zero-dependency"
+  ],
+  "author": "baiyixing12",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/baiyixing12/novel-distill.git"
+  },
+  "homepage": "https://github.com/baiyixing12/novel-distill#readme",
+  "bugs": {
+    "url": "https://github.com/baiyixing12/novel-distill/issues"
+  }
+}

@@ -1,0 +1,29 @@
+# 依赖与缓存
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# 临时产物 / 测试输出
+/tmp/
+*.log
+out.md
+out.json
+*.out
+
+# 输入小说正文（体积大 + 版权原因，不入库）
+examples/*.utf8.txt
+examples/*.txt
+!examples/sample.txt
+examples/*.bak*
+
+# 工具临时脚本产物
+tools/__pycache__/
+*.pyc
