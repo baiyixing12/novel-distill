@@ -22,11 +22,12 @@ import { splitChapters } from './core/text.js';
 import { styleFingerprint, renderStyle } from './core/style.js';
 import { extractEntities, renderEntities } from './core/entity.js';
 import { deaiScan, renderDeai } from './core/deai.js';
+import { pickSlices, parseAnswers, renderSemantic } from './core/deai_semantic.js';
 
-const TOOL_VERSION = '0.1.0';
+const TOOL_VERSION = '0.2.0';
 
 function parseArgs(argv) {
-  const o = { file: null, style: false, entities: false, deai: false, json: false, out: null, maxChars: null, quiet: false };
+  const o = { file: null, style: false, entities: false, deai: false, json: false, out: null, maxChars: null, quiet: false, semantic: false, semanticAnswers: null, maxSlices: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--style') o.style = true;
@@ -34,6 +35,9 @@ function parseArgs(argv) {
     else if (a === '--deai') o.deai = true;
     else if (a === '--json') o.json = true;
     else if (a === '--quiet') o.quiet = true;
+    else if (a === '--semantic') o.semantic = true;
+    else if (a === '--answers') o.semanticAnswers = argv[++i];
+    else if (a === '--max-slices') o.maxSlices = parseInt(argv[++i], 10) || null;
     else if (a === '-o' || a === '--out') o.out = argv[++i];
     else if (a === '--max-chars') o.maxChars = parseInt(argv[++i], 10) || null;
     else if (!a.startsWith('-')) o.file = a;
@@ -56,7 +60,17 @@ function usage() {
   -o, --out <文件>  结果写入指定文件（默认打印到终端）
   --max-chars <N>  最多分析 N 个字符（默认不限，大文件建议设 200000~500000 提速）
   --quiet          静默模式，只输出结果
-  -h, --help       显示帮助`);
+  -h, --help       显示帮助
+
+语义层复审（两段式，需配合 --deai）：
+  --semantic             第一段：跑规则 + 挑可疑片段 + 打印 prompt（供你手动贴给任意模型）
+  --answers <json>       第二段：把你从模型拿到的答复（JSON 数组或文件路径）交给本工具解析
+  --max-slices <N>       最多挑多少可疑片段，默认 12
+
+  手动模式示例：
+    node cli.js 小说.txt --deai --semantic              # 打印 prompt
+    node cli.js 小说.txt --deai --answers reply.json    # 校验并融合（reply.json 是模型答复）
+  本工具永不联网、不调模型；模型由你（或宿主 agent）提供。`);
 }
 
 function main() {
@@ -97,6 +111,43 @@ function main() {
     const d = deaiScan(src, { maxChars: o.maxChars || 500000 });
     result.deai = d;
     if (!o.json) console.log(renderDeai(d) + '\n');
+
+    // ── 语义层复审（两段式手动模式）──
+    // --semantic：打印 prompt，让用户手动贴给任意模型（无宿主时的降级路径）
+    // --answers ：读取用户从模型拿到的答复，校验并融合
+    if (o.semantic || o.semanticAnswers) {
+      const { slices, prompt } = pickSlices(d, src, { maxSlices: o.maxSlices || 12 });
+
+      if (o.semanticAnswers) {
+        let ansRaw = o.semanticAnswers;
+        // 若 --answers 指向一个存在的文件，则读文件内容
+        if (fs.existsSync(ansRaw)) ansRaw = fs.readFileSync(ansRaw, 'utf8');
+        const report = parseAnswers(d, slices, ansRaw, src);
+        result.semantic = report;
+        if (!o.json) console.log(renderSemantic(report) + '\n');
+      } else {
+        // 只出 prompt
+        result.semantic = { stage: 1, slices, prompt };
+        if (o.json) {
+          // JSON 模式下把 prompt 放进 result.semantic（稍后统一输出）
+        } else {
+          console.log('══════ 语义层复审 · 第一段（挑片 + prompt）══════');
+          console.log(`规则分：${d.score}/100（${d.level}）`);
+          console.log(`可疑片段：共 ${slices.length} 段`);
+          for (const s of slices) console.log(`  · ${s.id}  [${s.ruleHint}]  @${s.range[0]}-${s.range[1]}`);
+          console.log('');
+          console.log('──── 请把下面这段 prompt 复制给任意模型 ────');
+          console.log('');
+          console.log(prompt);
+          console.log('');
+          console.log('──── 拿到模型答复后 ────');
+          console.log('把答复存成文件（例如 reply.json），再运行：');
+          console.log(`  node cli.js ${o.file} --deai --answers reply.json`);
+          console.log('══════════════════════════════════════════');
+          console.log('');
+        }
+      }
+    }
   }
 
   const outStr = o.json ? JSON.stringify(result, null, 2) : '';

@@ -1,7 +1,7 @@
 {
   "name": "novel-distill",
-  "version": "0.1.0",
-  "description": "小说文本蒸馏器：文风指纹 + 设定档案 + 去 AI 味检测。纯 JS 零依赖，适用于任何 agent。",
+  "version": "0.2.0",
+  "description": "小说文本蒸馏器：文风指纹 + 设定档案 + 去 AI 味检测（含两段式语义复审插件协议）。纯 JS 零依赖，适用于任何 agent。",
   "type": "module",
   "bin": {
     "novel-distill": "cli.js"
